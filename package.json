@@ -1,0 +1,14 @@
+{
+  "name": "HelloWorld",
+  "version": "1.0.0",
+  "description": "My hello world app",
+  "author": "Dipanjan Bhowmik",
+  "license": "ISC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.13.3"
+  }
+}
