@@ -171,3 +171,79 @@ $ docker stop 1ce0575a528
 ```
 
 Please note if you are making any changes in the file here you need to run the docker build command again to build the image and then run it.
+
+So far so good and your have successfully dockerized your webservice.
+
+## Step 3: Fine tune your development environment
+
+You must have noticed that you need to build the docker image every time you make a change in the project file - effectively `change > stop > build > start` cycle - which is annoying and slows down your pace of development.
+
+First, we will comment out the `ADD . /app` in the Dockerfile like this:
+
+```javascript
+FROM alpine
+RUN apk update && apk upgrade
+RUN apk add nodejs
+RUN npm install express
+
+WORKDIR /app
+#ADD . /app
+EXPOSE 3000
+ENTRYPOINT [ "npm", "start" ]
+```
+
+And make the changes in the server.js (just change the string Hello to Hi) and without building, we will stop the docker container and start with the following command.
+
+```bash
+docker run -p5000:3000 -v $PWD:/app -d node-test
+```
+
+So, we have added the volume which is the current directory and mapped it to the /app directory in the docker container.
+
+And you will see the change is reflected without building it again. So, it became: `change > stop  > start` cycle (the build step is gone).
+
+Now, lets install `nodemon`:
+
+```bash
+$ npm install nodemon
+```
+
+Then, add the nodemon in the npm install line of the Dockerfile:
+
+```bash
+$ cat Dockerfile
+
+FROM alpine
+RUN apk update && apk upgrade
+RUN apk add nodejs
+RUN npm install express nodemon
+
+WORKDIR /app
+#ADD . /app
+EXPOSE 3000
+ENTRYPOINT [ "npm", "start" ]
+```
+
+Next, use the nodemon instead of node in the `start` line of package.json:
+
+```json
+$ cat package.json
+{
+  "name": "HelloWorld",
+  "version": "1.0.0",
+  "description": "My hello world app",
+  "author": "Dipanjan Bhowmik",
+  "license": "ISC",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.13.3"
+  }
+}
+```
+
+Now, for once run the stop > build > run cycle. And then if you change the file server.js - you do not need to do the stop > build > run cycle.
+
+So, now you are in a better productive development environment.
