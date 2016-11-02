@@ -247,3 +247,56 @@ $ cat package.json
 Now, for once run the stop > build > run cycle. And then if you change the file server.js - you do not need to do the stop > build > run cycle.
 
 So, now you are in a better productive development environment.
+
+## Step 4: Push your docker images
+
+Till now the repository was local. Now, we will push our docker image to the public docker repository. For that, you need to create an account in dockerhub.com. My account in dockerhub is onlydevelop. So, all examples will be with that name.
+
+First, you need to see the list of images:
+
+```bash
+$ docker images
+REPOSITORY                    TAG                 IMAGE ID            CREATED             SIZE
+node-test                     latest              ceb718e9ce8b        6 days ago          43.39 MB
+```
+
+Then, you tag the image and see if the image is properly tagged:
+
+```bash
+$ docker tag ceb718e9ce8b onlydevelop/node-test:latest
+$ docker images
+REPOSITORY                    TAG                 IMAGE ID            CREATED             SIZE
+node-test                     latest              ceb718e9ce8b        6 days ago          43.39 MB
+onlydevelop/node-test         latest              ceb718e9ce8b        6 days ago          43.39 MB
+```
+Next, you login and push your docker image to dockerhub:
+
+```bash
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: onlydevelop
+Password:
+Login Succeeded
+$ docker push onlydevelop/node-test
+The push refers to a repository [docker.io/onlydevelop/node-test]
+01ae0e045d3d: Pushed
+15784ea9704c: Pushed
+37a679f0fad0: Pushed
+3cccad12f85b: Pushed
+011b303988d2: Mounted from library/alpine
+latest: digest: ...
+```
+
+Now, to test it, remove your existing docker images and pull from the repo:
+
+```bash
+$ docker rmi -f ceb718e9ce8b
+...
+docker run -p5000:3000 -v $PWD:/app -d onlydevelop/node-test
+Unable to find image 'onlydevelop/node-test:latest' locally
+latest: Pulling from onlydevelop/node-test
+...
+c7795799ecc7e618
+```
+
+So, now your image is pulled from public dockerhub and run in your local machine.
