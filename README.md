@@ -292,7 +292,7 @@ Now, to test it, remove your existing docker images and pull from the repo:
 ```bash
 $ docker rmi -f ceb718e9ce8b
 ...
-docker run -p5000:3000 -v $PWD:/app -d onlydevelop/node-test
+$ docker run -p5000:3000 -v $PWD:/app -d onlydevelop/node-test
 Unable to find image 'onlydevelop/node-test:latest' locally
 latest: Pulling from onlydevelop/node-test
 ...
