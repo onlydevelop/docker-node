@@ -300,3 +300,177 @@ c7795799ecc7e618
 ```
 
 So, now your image is pulled from public dockerhub and run in your local machine.
+
+## Step 5: Running your service in a kubectl cluster
+
+As a pre-requisite, we want to create an image where the node-js source is bundled within the image.
+
+To do that, we will uncomment the `ADD . /app` line in Dockerfile:
+
+```bash
+$ cat Dockerfile
+
+FROM alpine
+RUN apk update && apk upgrade
+RUN apk add nodejs
+RUN npm install express nodemon
+
+WORKDIR /app
+ADD . /app
+EXPOSE 3000
+ENTRYPOINT [ "npm", "start" ]
+```
+Then, build and push with a version number:
+
+```bash
+$ docker build -t node-test:0.1 .
+Sending build context to Docker daemon 9.868 MB
+Step 1 : FROM alpine
+ ---> baa5d63471ea
+Step 2 : RUN apk update && apk upgrade
+ ---> Using cache
+ ---> 947cf5948524
+...
+
+$ docker images
+REPOSITORY                    TAG                 IMAGE ID            CREATED             SIZE
+node-test                     0.1                 326a7eca6110        52 minutes ago      51.18 MB
+
+$ docker tag 326a7eca6110 onlydevelop/node-test:0.1
+[14:56]~/work/anvil/node/docker-node:master ✗ $ docker images
+REPOSITORY                    TAG                 IMAGE ID            CREATED             SIZE
+node-test                     0.1                 326a7eca6110        53 minutes ago      51.18 MB
+onlydevelop/node-test         0.1                 326a7eca6110        53 minutes ago      51.18 MB
+
+$ docker login
+...
+
+$ docker push onlydevelop/node-test:0.1
+...
+```
+
+Now, we want to test our service in a minikube/kubectl cluster locally. Please check the documentation how can you install minikube/kubectl locally in your machine.
+
+When you are done, first you need to start minikube:
+
+```bash
+$ minikube start
+There is a newer version of minikube available (v0.12.2).  Download it here:
+https://github.com/kubernetes/minikube/releases/tag/v0.12.2
+To disable this notification, add WantUpdateNotification: False to the json config file at /Users/dbhowmik/.minikube/config
+(you may have to create the file config.json in this folder if you have no previous configuration)
+Starting local Kubernetes cluster...
+Kubectl is now configured to use the cluster.
+```
+
+You may start the kubectl dashboard using:
+
+```bash
+$ minikube dashboard
+Opening kubernetes dashboard in default browser...
+```
+
+Now, we will start a pod as a single instance of our image:
+
+```bash
+$ kubectl run node-test --image=onlydevelop/node-test:0.1 --port=3000
+deployment "node-test" created
+$ kubectl get pods
+NAME                        READY     STATUS    RESTARTS   AGE
+node-test-253544039-omvfj   1/1       Running   0          1m
+```
+
+Now, we need to expose it as a service so that it can be used from outside:
+
+```bash
+$ kubectl expose deployment node-test --type=NodePort
+service "node-test" exposed
+$ kubectl get services
+NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+kubernetes   10.0.0.1     <none>        443/TCP    10d
+node-test    10.0.0.23    <nodes>       3000/TCP   1m
+```
+
+The `--type` for minikube supports `NodePort` only.
+
+Now, we need to know how to get the URL where the service is exposed:
+
+```bash
+$ minikube service node-test --url                 
+http://192.168.99.100:31815
+```
+
+So, now we can use the URL to test our exposed service:
+
+```bash
+$ curl $(minikube service node-test --url)/user/dipanjan              
+Hello dipanjan from node-test-253544039-omvfj
+```
+
+Great! That means, the service is exposed properly for single instance.
+
+Now, let us delete this provision:
+
+```bash
+$ kubectl delete service,deployment node-test
+service "node-test" deleted
+deployment "node-test" deleted
+```
+
+OK. Next, let us run this in a cluster, which is very easy.
+
+Let us create a cluster of 3 replics(note now there are 3 pods):
+
+```bash
+$ kubectl run node-test --image=onlydevelop/node-test:0.1 --port=3000 --replicas=3
+deployment "node-test" created
+$ kubectl get pods
+NAME                        READY     STATUS    RESTARTS   AGE
+node-test-253544039-gy49t   1/1       Running   0          49s
+node-test-253544039-ktx5q   1/1       Running   0          49s
+node-test-253544039-pcm4v   1/1       Running   0          49s
+```
+
+Now, we will once again expose the service:
+
+```bash
+$ kubectl expose deployment node-test --type=NodePort                
+service "node-test" exposed
+
+$ kubectl get services                                           
+NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+kubernetes   10.0.0.1     <none>        443/TCP    10d
+node-test    10.0.0.163   <nodes>       3000/TCP   6s
+
+$ minikube service node-test --url                        
+http://192.168.99.100:32062
+```
+
+Now, if you run the same curl command multiple times you will response may come from different pods:
+
+```bash
+$ curl $(minikube service node-test --url)/user/db               
+Hello db from node-test-253544039-gy49t
+
+$ curl $(minikube service node-test --url)/user/db
+Hello db from node-test-253544039-pcm4v
+
+curl $(minikube service node-test --url)/user/db
+Hello db from node-test-253544039-ktx5q
+```
+
+This shows now your service is deployed in a load balanced cluster and any one of the host may respond to your request (note the changes in the hostname part after `from`).
+
+
+
+Finally, if you want to cleanup your environment:
+
+```bash
+$ kubectl delete service,deployment node-test
+service "node-test" deleted
+deployment "node-test" deleted
+
+$ minikube stop
+Stopping local Kubernetes cluster...
+Machine stopped.
+```
