@@ -1,7 +1,5 @@
-FROM alpine
-RUN apk update && apk upgrade
-RUN apk add nodejs
-RUN npm install express nodemon
+FROM mhart/alpine-node
+RUN npm install -g express nodemon
 
 WORKDIR /app
 ADD . /app
