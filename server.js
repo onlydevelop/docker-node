@@ -5,7 +5,7 @@ var os = require("os");
 var hostname = os.hostname();
 
 // Constants
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // App
 const app = express();
