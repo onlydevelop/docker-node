@@ -1,5 +1,4 @@
-FROM mhart/alpine-node
-RUN npm install -g express nodemon
+FROM mhart/alpine-node:6
 
 WORKDIR /app
 ADD . /app
